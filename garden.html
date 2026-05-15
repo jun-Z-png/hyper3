@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Garden — Hyper</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 100vw;
+    min-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    background: #f0eeeb;
+    font-family: 'Roboto Condensed', sans-serif;
+    cursor: default;
+    position: relative;
+  }
+
+  #staffCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .ui-layer {
+    position: absolute;
+    z-index: 10;
+    width: 100%;
+    pointer-events: none;
+  }
+  .ui-layer * { pointer-events: auto; }
+
+  
+
+  .visitor-count {
+    position: absolute;
+    font-family: 'Roboto Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    color: #000;
+  }
+
+  .visitor-img {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    z-index: 15;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="staffCanvas"></canvas>
+
+<div class="ui-layer" id="uiLayer">
+  
+  <div class="visitor-count" id="visitorCount">Loading...</div>
+</div>
+
+<script>
+const canvas = document.getElementById('staffCanvas');
+const ctx = canvas.getContext('2d');
+const uiLayer = document.getElementById('uiLayer');
+
+const LINES_PER_STAFF = 5;
+const LINE_SPACING = 10;
+const STAFF_GAP = 100;
+const MARGIN = 40;
+const VISITORS_PER_STAFF = 8;
+
+// Placeholder visitor images — replace with your actual image paths
+// To use real images: change the emoji to <img> elements
+const visitorIcons = ['./visitors/bird1.svg', 
+'./visitors/black_bug.svg', 
+'./visitors/brown_bug.svg', 
+'./visitors/crab1.svg', 
+'./visitors/cyan_bug.svg', 
+'./visitors/forest_green_bug.svg', 
+'./visitors/green_bug.svg', 
+'./visitors/house1.svg',
+'./visitors/house2.svg',
+'./visitors/house3.svg',
+'./visitors/lady_bug.svg',
+'./visitors/orange_bug.svg',
+'./visitors/pale_blue_bug.svg',
+'./visitors/pink_bug.svg',
+'./visitors/rabbit1.svg',
+'./visitors/rusty_bug.svg',
+'./visitors/white_bug.svg',
+'./visitors/yellow_bug.svg',
+];
+
+// ══════════════════════════════════════════
+// CROSS-BROWSER VISITOR TRACKING
+// ══════════════════════════════════════════
+// 
+// Option A: JSONBin.io (free, no server needed)
+// 1. Go to https://jsonbin.io and create a free account
+// 2. Create a new bin with content: { "count": 0 }
+// 3. Copy the Bin ID and your API key
+// 4. Replace the values below:
+//
+// const BIN_ID = 'YOUR_BIN_ID';
+// const API_KEY = 'YOUR_API_KEY';
+//
+async function getVisitorCount() {
+  try {
+    const res = await fetch('https://api.jsonbin.io/v3/b/6a06ab2fc0954111d8271569', {
+      headers: { 'X-Master-Key': '$2a$10$5jyFeZSKHZAHXKt6YQ633.5y6fVZFGPObFY4GktnIPS5yS7WyIOvq' }
+    });
+    const data = await res.json();
+    return data.record.count;
+  } catch {
+    return 0;
+  }
+}
+//
+ async function incrementVisitorCount() {
+   const current = await getVisitorCount();
+   await fetch(`https://api.jsonbin.io/v3/b/6a06ab2fc0954111d8271569`, {
+     method: 'PUT',
+     headers: {
+       'Content-Type': 'application/json',
+       'X-Master-Key': '$2a$10$5jyFeZSKHZAHXKt6YQ633.5y6fVZFGPObFY4GktnIPS5yS7WyIOvq'
+     },
+     body: JSON.stringify({ count: current + 1 })
+   });
+   return current + 1;
+ }
+//
+// ──────────────────────────────────────────
+// Option B: Firebase Realtime Database (free tier, more robust)
+// Option C: Supabase (free tier, PostgreSQL)
+// ══════════════════════════════════════════
+
+
+
+async function init() {
+  const visitorCount = await getVisitorCount();
+
+  const STAFF_GROUPS = Math.max(5, Math.ceil((visitorCount + VISITORS_PER_STAFF) / VISITORS_PER_STAFF) + 1);
+  const staffH = (LINES_PER_STAFF - 1) * LINE_SPACING;
+  const totalH = STAFF_GROUPS * staffH + (STAFF_GROUPS - 1) * STAFF_GAP + 120;
+  const pageH = Math.max(window.innerHeight, totalH);
+  const W = window.innerWidth;
+
+  // Resize canvas
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr;
+  canvas.height = pageH * dpr;
+  canvas.style.height = pageH + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  uiLayer.style.height = pageH + 'px';
+
+  // Draw staves
+  ctx.clearRect(0, 0, W * 2, pageH * 2);
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 0.5;
+
+  const startY = 60;
+  const groups = [];
+  for (let g = 0; g < STAFF_GROUPS; g++) {
+    const top = startY + g * (staffH + STAFF_GAP);
+    groups.push({ top, bottom: top + staffH });
+    for (let l = 0; l < LINES_PER_STAFF; l++) {
+      const y = top + l * LINE_SPACING;
+      ctx.beginPath();
+      ctx.moveTo(MARGIN, y);
+      ctx.lineTo(W - MARGIN, y);
+      ctx.stroke();
+    }
+  }
+
+  // Position back link
+  
+
+  // Visitor count text
+  const countEl = document.getElementById('visitorCount');
+  countEl.style.right = MARGIN + 'px';
+  countEl.style.top = (groups[0].top + staffH / 2 - 8) + 'px';
+  countEl.textContent = visitorCount + (visitorCount === 1 ? ' visitor has' : ' visitors have') + ' been here';
+
+  // Place visitors
+  document.querySelectorAll('.visitor-img').forEach(el => el.remove());
+
+  // Use a seeded random so same count always produces same layout
+  let seed = 42;
+  function seededRandom() {
+    seed = (seed * 16807 + 0) % 2147483647;
+    return seed / 2147483647;
+  }
+
+  const usableW = W - MARGIN * 2 - 60;
+  let placed = 0;
+  for (let g = 1; g < STAFF_GROUPS && placed < visitorCount; g++) {
+    for (let v = 0; v < VISITORS_PER_STAFF && placed < visitorCount; v++) {
+      const el = document.createElement('div');
+      el.className = 'visitor-img';
+
+      const x = MARGIN + 30 + (usableW / VISITORS_PER_STAFF) * v + seededRandom() * 20;
+      const lineIdx = Math.floor(seededRandom() * LINES_PER_STAFF);
+      const y = groups[g].top + lineIdx * LINE_SPACING - 28;
+
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      const img = document.createElement('img');
+img.src = visitorIcons[Math.floor(seededRandom() * visitorIcons.length)];
+img.style.width = '100%';
+img.style.height = '100%';
+img.style.objectFit = 'contain';
+el.appendChild(img);
+
+      uiLayer.appendChild(el);
+      placed++;
+    }
+  }
+}
+
+init();
+window.addEventListener('resize', init);
+</script>
+</body>
+</html>

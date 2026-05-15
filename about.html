@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About — Hyper</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 100vw;
+    min-height: 100vh;
+    background: #f0eeeb;
+    font-family: 'Roboto Condensed', sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px 50px;
+  }
+
+ 
+  .about-text {
+    width: 100%;
+    font-size: 16px;
+    font-weight: 400;
+    color: #000;
+    line-height: 2;
+  }
+
+  .about-text span {
+    display: inline;
+    opacity: 0;
+    transition: opacity 1.5s ease;
+  }
+  .about-text span.visible {
+    opacity: 1;
+  }
+</style>
+</head>
+<body>
+  
+  <div class="about-text" id="aboutText">
+    <p>Hyper is an interactive experience exploring neurodivergent perception of time, sound, and space through a playful,poetic, and metaphoric journey.</p>
+    <p>Each level presents a different aspects of life — sensory overload, time and self, social interactions— reflecting what makes up the world of neurodivergent and how to emphasize across the spectrum.</p>
+    <p>This project was created as part of a thesis at Parsons School of Design, MFA Design and Technology, graduating May 2026.</p>
+    <p>Designed and developed by Jun Zhou. For inquiries, visit junzhou.info.</p>
+  </div>
+
+<script>
+// Wrap each word in a span
+const container = document.getElementById('aboutText');
+const paragraphs = container.querySelectorAll('p');
+const allSpans = [];
+
+paragraphs.forEach(p => {
+  const words = p.textContent.split(' ');
+  p.innerHTML = words.map(w => `<span>${w} </span>`).join('');
+  p.querySelectorAll('span').forEach(s => allSpans.push(s));
+});
+
+// Shuffle order for random appearance
+const indices = allSpans.map((_, i) => i);
+for (let i = indices.length - 1; i > 0; i--) {
+  const j = Math.floor(Math.random() * (i + 1));
+  [indices[i], indices[j]] = [indices[j], indices[i]];
+}
+
+// Reveal words one by one at random intervals
+let revealed = 0;
+function revealNext() {
+  if (revealed >= indices.length) return;
+  allSpans[indices[revealed]].classList.add('visible');
+  revealed++;
+  const delay = 30 + Math.random() * 120;
+  setTimeout(revealNext, delay);
+}
+revealNext();
+</script>
+</body>
+</html>
